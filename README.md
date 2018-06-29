@@ -1,4 +1,5 @@
-# staruml-infomodel
+# Centric Information Model Extension for StarUML
+## Overview
 Centric Library Export StarUML Extension. Exports a Centric Library Xml or text file from a StarUML 3.x project (mdj) file. Validated for StarUML version 3.0.0. The Java source project is http://github.com/centricconsulting/staruml-infomodel-java.
 
 **NOTE: Compatible only with StarUML verion 3.0 and higher.**  For compatability with StarUML version 2.x use this repository: http://github.com/centricconsulting/staruml-infomodel-2.0.
