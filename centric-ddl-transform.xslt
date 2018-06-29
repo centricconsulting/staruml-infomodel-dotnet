@@ -23,6 +23,7 @@
 
 DOCUMENT INFORMATION  (<xsl:value-of select="count(//ownedElements[_type='UMLClass' and not(visibility)])" /> Tables)
 
+FILE:      <xsl:value-of select="document/@sourceFile" />
 PROJECT:   <xsl:value-of select="document/name" />
 AUTHOR:    <xsl:value-of select="document/author" />
 MODIFIED:  <xsl:value-of select="document/@sourceModifiedTimestamp" />
