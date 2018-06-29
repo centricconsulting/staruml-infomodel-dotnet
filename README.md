@@ -24,8 +24,8 @@ From within StarUML, select the menu **`File >> Export`** menu.  You will see se
 2. Enter a target filename and click **`Save`**.
 3. The extension will automatically generate an Xml conversion of the StarUML Json file (*.mdj).
 
-## Extension Installation Options
-### #1 - StarUML Extension Manager
+## Installation
+### StarUML Extension Manager
 1. Open the StarUML application.
 2. Select the menu **`Tools >> Extension Manager...`**
 3. Click the **`Install From Url...`** button.
@@ -33,6 +33,6 @@ From within StarUML, select the menu **`File >> Export`** menu.  You will see se
 5. The extension will automatically install.
 
 ## Customizations
-All customizations should be made in the StarUML User Extensions >> Centric Library Export folder.  On Windows machines, this folder is located here: **`"C:\Users\{user}\AppData\Roaming\StarUML\extensions\user\centric.infomodel.dotnet"`**.  The placeholder {user} should be replaced with your Windows account name.
+All customizations should be made in the StarUML User Extensions >> Centric Library Export folder.  On Windows machines, this folder is located here: **`"C:\Users\{user}\AppData\Roaming\StarUML\extensions\user\centric.infomodel.dotnet"`**.  The placeholder **`{user}`** should be replaced with your Windows login.
 
 **Xslt File**. You can alter the Xslt files **`centric-ddl-transform.xslt`** or **`centric-library-transform.xslt`** located located in the StarUML User Extensions folder.  This file controls the generation of the Library text file based on Xml derived from the StarUML project.
