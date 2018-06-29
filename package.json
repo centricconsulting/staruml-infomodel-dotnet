@@ -1,0 +1,17 @@
+{
+    "name": "centric.infomodel.dotnet",
+    "title": "Centric Library Export",
+    "description": "Generates a Centric library, DDL or Star UML Xml (converted from Json) from a StarUML project (mdj) file. Requires .NET Framework 4.5.2 or higher.",
+    "homepage": "https://github.com/centricconsulting/staruml-infomodel-dotnet",
+    "version": "2.0.0",
+    "keywords": ["xslt","transform","centric","xml","library","ddl","information","model"],
+    "author": {
+        "name": "Jeff Kanel",
+        "email": "jeff.kanel@centricconsulting.com",
+        "url": "https://github.com/centricconsulting/staruml-infomodel-dotnet"
+    },
+    "license": "MIT",
+    "engines": {
+        "staruml": "^3.0.0"
+    }
+}

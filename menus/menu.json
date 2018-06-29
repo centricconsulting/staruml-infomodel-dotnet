@@ -1,0 +1,35 @@
+{
+  "menu": [
+    {
+      "id": "file.export",
+      "submenu": [
+        { "type": "separator" },
+        {
+          "label": "Centric Library Listing...",
+          "id": "file.export.centriclibrary",
+          "command": "centriclibrary:export"
+        }
+      ]
+    },
+    {
+      "id": "file.export",
+      "submenu": [
+        {
+          "label": "Centric EDW SQL...",
+          "id": "file.export.centricddl",
+          "command": "centricddl:export"
+        }
+      ]
+    },    
+    {
+      "id": "file.export",
+      "submenu": [
+        {
+          "label": "StarUml As Xml...",
+          "id": "file.export.starumlxml",
+          "command": "starumlxml:export"
+        }
+      ]
+    }
+  ]
+}
