@@ -33,6 +33,6 @@ From within StarUML, select the menu **`File >> Export`** menu.  You will see se
 5. The extension will automatically install.
 
 ## Customizations
-All customizations should be made in the StarUML User Extensions >> Centric Library Export folder.  On Windows machines, this folder is located here: **`"C:\Users\{user}\AppData\Roaming\StarUML\extensions\user\centric.infomodel.dotnet"`**.  The placeholder **`{user}`** should be replaced with your Windows login.
+All customizations should be made in the StarUML extensions folder for the current Windows user.  On Windows machines, this folder is located here: **`"C:\Users\{user}\AppData\Roaming\StarUML\extensions\user\centric.infomodel.dotnet"`**.  The placeholder **`{user}`** should be replaced with your Windows login.
 
 **Xslt File**. You can alter the Xslt files **`centric-ddl-transform.xslt`** or **`centric-library-transform.xslt`** located located in the StarUML User Extensions folder.  This file controls the generation of the Library text file based on Xml derived from the StarUML project.
