@@ -71,20 +71,28 @@ CREATE TABLE dbo.[<xsl:value-of select="user:GetTableName($class-name)" />] (
   <xsl:value-of select="user:GetTableName($class-name)" />_key INT IDENTITY(1000,1)
 
   -- GRAIN COLUMNS<xsl:choose>
-<xsl:when test="count(attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and isUnique='true'])=0">
-, <xsl:value-of select="user:GetColumnPhrase($class-name, 'REFERENCE', true())" />
-</xsl:when>
+<xsl:when test="count(attributes[_type='UMLAttribute'
+  and not(contains(multiplicity,'*'))
+  and not(visibility)
+  and isUnique='true'])=0">
+, <xsl:value-of select="user:GetColumnPhrase($class-name, 'REFERENCE', $class-name)" /> NOT NULL</xsl:when>
 <xsl:otherwise>
-  <xsl:for-each select="attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and isUnique='true']" >
-    <xsl:call-template name="column-phrase" />
-  </xsl:for-each>
-</xsl:otherwise>
+  <xsl:for-each select="attributes[_type='UMLAttribute' 
+    and not(contains(multiplicity,'*')) 
+    and not(visibility) and isUnique='true']" >
+    <xsl:call-template name="column-phrase">
+      <xsl:with-param name="grain" select="true()" /> 
+      <xsl:with-param name="required" select="true()" />
+    </xsl:call-template></xsl:for-each>
+  </xsl:otherwise>
 </xsl:choose>
 
   -- ENTITY REFERENCE COLUMNS<xsl:for-each
     select="attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and not(isUnique='true') and stereotype/_ref]" >
-    <xsl:call-template name="column-phrase" />
-  </xsl:for-each>
+    <xsl:call-template name="column-phrase">
+      <xsl:with-param name="grain" select="false()" /> 
+      <xsl:with-param name="required" select="false()" />
+    </xsl:call-template></xsl:for-each>
 
   -- ATTRIBUTE COLUMNS<xsl:for-each
     select="attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and not(isUnique='true') and not(stereotype/_ref)]" >
@@ -118,7 +126,7 @@ CREATE TABLE dbo.[<xsl:value-of select="user:GetTableName($class-name)" />] (
   -- PRIMARY KEY ON GRAIN COLUMNS
 , CONSTRAINT dbo_<xsl:value-of select="user:GetTableName($class-name)" />_pk PRIMARY KEY CLUSTERED (<xsl:choose>
 <xsl:when test="count(attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and isUnique='true'])=0">
-  <xsl:value-of select="user:GetColumnName($class-name, 'REFERENCE', true())" />
+  <xsl:value-of select="user:GetColumnName($class-name, 'REFERENCE', $class-name)" />
 </xsl:when>
 <xsl:otherwise>
   <xsl:for-each select="attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and isUnique='true']" >
@@ -138,13 +146,24 @@ CREATE TABLE dbo.[<xsl:value-of select="user:GetTableName($class-name)" />] (
 <!-- ##################################################################################### -->
 
 <xsl:template name="column-phrase" match="attributes">
+<xsl:param name="grain" />
+<xsl:param name="required" />
 <xsl:variable name="type-class-id" select="type/_ref" />
-, <xsl:value-of select="user:GetColumnPhrase(name, //ownedElements[_type='UMLClass' and _id=$type-class-id]/name, stereotype/_ref)" />
+<xsl:variable name="type-class-name" select="//ownedElements[_type='UMLClass' and _id=$type-class-id]/name" />
+<xsl:variable name="stereotype-class-id" select="stereotype/_ref"/>
+<xsl:variable name="stereotype-class-name" select="//ownedElements[_type='UMLClass' and _id=$stereotype-class-id]/name" />
+, <xsl:value-of select="user:GetColumnPhrase(name, $type-class-name, $stereotype-class-name)" />
+<xsl:if test="$required">NOT NULL</xsl:if>
+<xsl:if test="not($grain) and $stereotype-class-id"> DEFAULT 'UNKNOWN'</xsl:if>
 </xsl:template>
 
 <xsl:template name="column-name" match="attributes">
-<xsl:param name="position" /><xsl:variable name="type-class-id" select="type/_ref" />
-<xsl:if test="$position>1">, </xsl:if><xsl:value-of select="user:GetColumnName(name, //ownedElements[_type='UMLClass' and _id=$type-class-id]/name, stereotype/_ref)" />
+<xsl:param name="position" />
+<xsl:variable name="type-class-id" select="type/_ref" />
+<xsl:variable name="type-class-name" select="//ownedElements[_type='UMLClass' and _id=$type-class-id]/name" />
+<xsl:variable name="stereotype-class-id" select="stereotype/_ref"/>
+<xsl:variable name="stereotype-class-name" select="//ownedElements[_type='UMLClass' and _id=$stereotype-class-id]/name" />
+<xsl:if test="$position>1">, </xsl:if><xsl:value-of select="user:GetColumnName(name, $type-class-name, $stereotype-class-name)" />
 </xsl:template>
 
 <!-- ########################################### -->
@@ -152,9 +171,11 @@ CREATE TABLE dbo.[<xsl:value-of select="user:GetTableName($class-name)" />] (
 <!-- ########################################### -->
 
 <msxsl:script language="C#" implements-prefix="user">
+  <msxsl:using namespace="System"/>
   <msxsl:assembly name="System.Core" />
   <msxsl:using namespace="System.Linq" />
   <msxsl:using namespace="System.Collections.Generic"/>
+  <msxsl:using namespace="System.Text"/>  
   <msxsl:using namespace="System.Text.RegularExpressions"/>
 
 <![CDATA[
@@ -165,12 +186,18 @@ public string GetTableName(String ClassName)
     return ApplyDatabaseAbbreviations(Result);
 }
 
-public string GetColumnName(String AttributeName, String AttributeClassName, bool IsReference)
+public string GetColumnName(String AttributeName, String AttributeClassName, String ReferenceAttributeName)
 {
-  String ColumnName = FormatAsDatabaseObject(AttributeName);
+  // blend the attribute and reference attribute names
+  if(!String.IsNullOrEmpty(ReferenceAttributeName))
+  {
+    AttributeName = BlendAttributeNames(AttributeName, ReferenceAttributeName);
+    
+    //override the Attribute Class for reference columns
+    AttributeClassName = "REFERENCE";
+  }
 
-  //override the Attribute Class for reference columns
-  if(IsReference) AttributeClassName = "REFERENCE";
+  String ColumnName = FormatAsDatabaseObject(AttributeName);
 
   // determine the AttributeClassInfo
   AttributeClassInfo aci = AttributeClassInfo.GetInfo(AttributeClassName);
@@ -191,12 +218,28 @@ public string GetColumnName(String AttributeName, String AttributeClassName, boo
   }
 }
 
-public string GetColumnPhrase(String AttributeName, String AttributeClassName, bool IsReference)
+public String BlendAttributeNames(String PrimaryAttributeName, String SecondaryAttributeName)
 {
-  String ColumnName = GetColumnName(AttributeName, AttributeClassName, IsReference);
+
+    if(PrimaryAttributeName.EndsWith(SecondaryAttributeName))
+    {
+      return PrimaryAttributeName;
+    }
+    else
+    {
+      return PrimaryAttributeName + " " + SecondaryAttributeName;
+    }
+}
+
+public string GetColumnPhrase(String AttributeName, String AttributeClassName, String ReferenceAttributeName)
+{
+  String ColumnName = GetColumnName(AttributeName, AttributeClassName, ReferenceAttributeName);
 
   //override the Attribute Class for reference columns
-  if(IsReference) AttributeClassName = "REFERENCE";
+  if(!String.IsNullOrEmpty(ReferenceAttributeName))
+  {
+    AttributeClassName = "REFERENCE";
+  }
 
   // determine the AttributeClassInfo
   AttributeClassInfo aci = AttributeClassInfo.GetInfo(AttributeClassName);
@@ -376,7 +419,6 @@ public class AttributeClassInfo
     }
   }
 }
-
 
 ]]>
 
