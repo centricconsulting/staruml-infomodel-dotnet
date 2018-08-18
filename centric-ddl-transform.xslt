@@ -3,83 +3,90 @@
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:msxsl="urn:schemas-microsoft-com:xslt"
   xmlns:user="urn:schemas-microsoft-com:user"
-  xmlns:json="http://james.newtonking.com/projects/json"
-  exclude-result-prefixes="#default msxsl user xsl json">
+  exclude-result-prefixes="#default msxsl xsl user">
 
 <xsl:output encoding="UTF-8" method="text" omit-xml-declaration="yes" indent="no" />
-<xsl:strip-space elements="*"/>
+<!-- xsl:output encoding="UTF-8" method="xml" omit-xml-declaration="no" indent="yes" / -->
+<xsl:strip-space elements="*" />
+
+<!-- ##################################################################################### -->
+<!-- TEMPLATE: TOP LEVEL -->
+<!-- Generates the Model Xml and sends to output template -->
+<!-- ##################################################################################### -->
 
 <xsl:template match="/">
-<xsl:call-template name="project" />
+
+<!-- NOTE:
+  This code will generate the xml as an output. 
+  Also requires activating the xsl:output with method="xml". 
+
+  <xsl:call-template name="build-model-xml"/>
+
+-->
+
+<xsl:variable name="model-xml">
+  <xsl:call-template name="build-model-xml"/>
+</xsl:variable>
+
+<xsl:apply-templates select="msxsl:node-set($model-xml)/model" mode="build-output"/>
+
 </xsl:template>
 
 <!-- ##################################################################################### -->
-<!-- SUBJECT AREAS -->
+<!-- TEMPLATE: GENERATE OUTPUT -->
+<!-- Generates the output using the Model Xml as an input (see DTD below) -->
 <!-- ##################################################################################### -->
 
-<xsl:template name="project">
+<!-- TEMPLATE: MODEL NODE -->
+<xsl:template match="model" mode="build-output">
 /* ##################################################################################
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-DOCUMENT INFORMATION  (<xsl:value-of select="count(//ownedElements[_type='UMLClass' and not(visibility)])" /> Tables)
+DOCUMENT INFORMATION  (<xsl:value-of select="count(subject/entity[@implement='true'])" /> Tables)
 
-FILE:      <xsl:value-of select="document/@sourceFile" />
-PROJECT:   <xsl:value-of select="document/name" />
-AUTHOR:    <xsl:value-of select="document/author" />
-MODIFIED:  <xsl:value-of select="document/@sourceModifiedTimestamp" />
+FILE:      <xsl:value-of select="file" />
+MODEL:     <xsl:value-of select="name" />
+AUTHOR:    <xsl:value-of select="author" />
+MODIFIED:  <xsl:value-of select="modify-timestamp" />
 
-Transform Generated on <xsl:value-of select="document/@transformedTimestamp" />
+Transform Generated on <xsl:value-of select="transform-timestamp" />
 
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ##################################################################################### */
 
-<xsl:for-each select="//ownedElements[_type='UMLSubsystem' and name !='Attribute Classes']">
-  <xsl:call-template name="subject" />
-</xsl:for-each>
+
+<xsl:apply-templates select="subject" />
 </xsl:template>
 
-
-  <!-- ##################################################################################### -->
-  <!-- SUBJECT AREAS (UMLSubsystem) -->
-  <!-- ##################################################################################### -->
-
-<xsl:template name="subject" match="ownedElements">
+<!-- TEMPLATE: SUBJECT NODES -->
+<xsl:template match="subject">
 /* ##################################################################################
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-SUBJECT AREA: <xsl:value-of select="name" /> (<xsl:value-of select="count(.//ownedElements[_type='UMLClass' and not(visibility)])" /> Tables)
+SUBJECT AREA: <xsl:value-of select="name" /> (<xsl:value-of select="count(entity[@implement='true'])" /> Tables)
 
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ##################################################################################### */
 
-<xsl:for-each select="./ownedElements[_type='UMLClass' and not(visibility)]">
-<xsl:call-template name="table" /></xsl:for-each>
+<xsl:apply-templates select="entity[@implement='true']" />
 </xsl:template>
 
-<!-- ##################################################################################### -->
-<!-- TABLES (UMLClass) -->
-<!-- ##################################################################################### -->
-
-<xsl:template name="table" match="ownedElements">
-<xsl:variable name="class-name" select="name" />
+<!-- TEMPLATE: ENTITTY NODES -->
+<xsl:template match="entity">
+<xsl:variable name="table-name" select="user:GetTableName(name)" />
 /* ##################################################################################
-TABLE: <xsl:value-of select="name" />
+TABLE: <xsl:value-of select="$table-name" />
 ##################################################################################### */
 
-CREATE TABLE dbo.[<xsl:value-of select="user:GetTableName($class-name)" />] (
+CREATE TABLE dbo.[<xsl:value-of select="$table-name" />] (
   -- NAMED KEY COLUMN
-  <xsl:value-of select="user:GetTableName($class-name)" />_key INT IDENTITY(1000,1)
+  <xsl:value-of select="$table-name" />_key INT IDENTITY(1000,1)
 
   -- GRAIN COLUMNS<xsl:choose>
-<xsl:when test="count(attributes[_type='UMLAttribute'
-  and not(contains(multiplicity,'*'))
-  and not(visibility)
-  and isUnique='true'])=0">
-, <xsl:value-of select="user:GetColumnPhrase($class-name, 'REFERENCE', $class-name)" /> NOT NULL</xsl:when>
+<xsl:when test="@infer-grain='true'">
+, <xsl:value-of select="user:GetColumnPhrase(name, 'REFERENCE', name)" /> NOT NULL</xsl:when>
 <xsl:otherwise>
-  <xsl:for-each select="attributes[_type='UMLAttribute' 
-    and not(contains(multiplicity,'*')) 
-    and not(visibility) and isUnique='true']" >
+  <xsl:for-each select="attribute[@implement='true' and @grain='true']" >
     <xsl:call-template name="column-phrase">
       <xsl:with-param name="grain" select="true()" /> 
       <xsl:with-param name="required" select="true()" />
@@ -87,15 +94,15 @@ CREATE TABLE dbo.[<xsl:value-of select="user:GetTableName($class-name)" />] (
   </xsl:otherwise>
 </xsl:choose>
 
-  -- ENTITY REFERENCE COLUMNS<xsl:for-each
-    select="attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and not(isUnique='true') and stereotype/_ref]" >
+  -- ATTRIBUTE COLUMNS - ENTITY REFERENCE <xsl:for-each
+    select="attribute[@reference='true' and @implement='true' and not(@grain='true')]" >
     <xsl:call-template name="column-phrase">
       <xsl:with-param name="grain" select="false()" /> 
       <xsl:with-param name="required" select="false()" />
     </xsl:call-template></xsl:for-each>
 
-  -- ATTRIBUTE COLUMNS<xsl:for-each
-    select="attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and not(isUnique='true') and not(stereotype/_ref)]" >
+  -- ATTRIBUTE COLUMNS - LITERALS<xsl:for-each
+    select="attribute[not(@reference='true') and @implement='true' and not(@grain='true')]" >
     <xsl:call-template name="column-phrase" />
   </xsl:for-each>
 
@@ -112,24 +119,24 @@ CREATE TABLE dbo.[<xsl:value-of select="user:GetTableName($class-name)" />] (
   -- TEMPORAL COLUMNS
 , version_begin_timestamp DATETIME2
     GENERATED ALWAYS AS ROW START
-    CONSTRAINT dbo_policy_version_begin
+    CONSTRAINT dbo_<xsl:value-of select="$table-name" />_version_begin
     DEFAULT SYSUTCDATETIME() NOT NULL
 
 , version_end_timestamp DATETIME2
     GENERATED ALWAYS AS ROW END
-    CONSTRAINT dbo_policy_version_end
+    CONSTRAINT dbo_<xsl:value-of select="$table-name" />_version_end
     DEFAULT CONVERT(DATETIME2,'9999-12-31 23:59:59') NOT NULL
 
 , PERIOD FOR SYSTEM_TIME(
     version_begin_timestamp, version_end_timestamp)
 
   -- PRIMARY KEY ON GRAIN COLUMNS
-, CONSTRAINT dbo_<xsl:value-of select="user:GetTableName($class-name)" />_pk PRIMARY KEY CLUSTERED (<xsl:choose>
-<xsl:when test="count(attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and isUnique='true'])=0">
-  <xsl:value-of select="user:GetColumnName($class-name, 'REFERENCE', $class-name)" />
+, CONSTRAINT dbo_<xsl:value-of select="$table-name" />_pk PRIMARY KEY CLUSTERED (<xsl:choose>
+<xsl:when test="@infer-grain='true'">
+  <xsl:value-of select="user:GetColumnName(name, 'REFERENCE', name)" />
 </xsl:when>
 <xsl:otherwise>
-  <xsl:for-each select="attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and isUnique='true']" >
+  <xsl:for-each select="attribute[@implement='true' and @grain='true']" >
     <xsl:call-template name="column-name">
     <xsl:with-param name="position" select="position()" />
     </xsl:call-template>
@@ -138,37 +145,58 @@ CREATE TABLE dbo.[<xsl:value-of select="user:GetTableName($class-name)" />] (
 </xsl:choose>)
 
 ) WITH (SYSTEM_VERSIONING = ON (
-  HISTORY_TABLE = dbo.<xsl:value-of select="user:GetTableName($class-name)" />_version));
+  HISTORY_TABLE = dbo.<xsl:value-of select="$table-name" />_version));
+
+<!-- NOT IMPLEMENTED 
+<xsl:apply-templates select="attribute" />
+<xsl:apply-templates select="measure" />
+<xsl:apply-templates select="instance" />
+-->
+
 </xsl:template>
 
+
+<!-- NOT IMPLEMENTED -->
+<!-- TEMPLATE: ATTRIBUTE NODES -->
+<xsl:template match="attribute">
+ATTRIBUTE: <xsl:value-of select="name" />
+</xsl:template>
+
+<!-- NOT IMPLEMENTED -->
+<!-- TEMPLATE: MEASURES NODES -->
+<xsl:template match="measure">
+MEASURE: <xsl:value-of select="name" />
+</xsl:template>
+
+<!-- NOT IMPLEMENTED -->
+<!-- TEMPLATE: INSTANCE NODES -->
+<xsl:template match="instance">
+INSTANCE: <xsl:value-of select="name" />
+</xsl:template>
+
+
+
 <!-- ##################################################################################### -->
-<!-- COLUMNS (UMLAttribute)-->
+<!-- TEMPLATES: SQL COLUMN GENERATION -->
 <!-- ##################################################################################### -->
 
 <xsl:template name="column-phrase" match="attributes">
 <xsl:param name="grain" />
 <xsl:param name="required" />
-<xsl:variable name="type-class-id" select="type/_ref" />
-<xsl:variable name="type-class-name" select="//ownedElements[_type='UMLClass' and _id=$type-class-id]/name" />
-<xsl:variable name="stereotype-class-id" select="stereotype/_ref"/>
-<xsl:variable name="stereotype-class-name" select="//ownedElements[_type='UMLClass' and _id=$stereotype-class-id]/name" />
-, <xsl:value-of select="user:GetColumnPhrase(name, $type-class-name, $stereotype-class-name)" />
+, <xsl:value-of select="user:GetColumnPhrase(name, type-name, reference-name)" />
 <xsl:if test="$required">NOT NULL</xsl:if>
-<xsl:if test="not($grain) and $stereotype-class-id"> DEFAULT 'UNKNOWN'</xsl:if>
+<xsl:if test="not($grain) and @reference='true'"> DEFAULT 'UNKNOWN'</xsl:if>
 </xsl:template>
 
 <xsl:template name="column-name" match="attributes">
 <xsl:param name="position" />
-<xsl:variable name="type-class-id" select="type/_ref" />
-<xsl:variable name="type-class-name" select="//ownedElements[_type='UMLClass' and _id=$type-class-id]/name" />
-<xsl:variable name="stereotype-class-id" select="stereotype/_ref"/>
-<xsl:variable name="stereotype-class-name" select="//ownedElements[_type='UMLClass' and _id=$stereotype-class-id]/name" />
-<xsl:if test="$position>1">, </xsl:if><xsl:value-of select="user:GetColumnName(name, $type-class-name, $stereotype-class-name)" />
+<xsl:if test="$position>1">, </xsl:if><xsl:value-of select="user:GetColumnName(name, type-name, reference-name)" />
 </xsl:template>
 
-<!-- ########################################### -->
-<!-- ######## C# Code  ########################## -->  
-<!-- ########################################### -->
+<!-- ##################################################################################### -->
+<!-- C# CODE -->
+<!-- Provides support code for the output transformation -->
+<!-- ##################################################################################### -->
 
 <msxsl:script language="C#" implements-prefix="user">
   <msxsl:using namespace="System"/>
@@ -224,6 +252,10 @@ public String BlendAttributeNames(String PrimaryAttributeName, String SecondaryA
     if(PrimaryAttributeName.EndsWith(SecondaryAttributeName))
     {
       return PrimaryAttributeName;
+
+    } else if(SecondaryAttributeName.StartsWith(PrimaryAttributeName) || SecondaryAttributeName.EndsWith(PrimaryAttributeName))
+    {
+      return SecondaryAttributeName;
     }
     else
     {
@@ -324,6 +356,12 @@ public class AttributeClassInfo
       return WorkingName;
     }
 
+    // check for plurals by adding "s"
+    if(WorkingName.EndsWith(this.Suffix + "s"))
+    {
+      return WorkingName.Substring(0, WorkingName.Length-1);
+    }
+
     // test if variant suffixes are being used, and then replace
     if(this.VariantSuffixes != null)
     {
@@ -332,6 +370,11 @@ public class AttributeClassInfo
         if(WorkingName.EndsWith(VariantSuffix))
         {
           return WorkingName.Substring(0, WorkingName.Length-VariantSuffix.Length) + this.Suffix;
+        }
+
+        if(WorkingName.EndsWith(VariantSuffix + "s"))
+        {
+          return WorkingName.Substring(0, WorkingName.Length-VariantSuffix.Length-1) + this.Suffix;
         }
       }
     }
@@ -423,5 +466,206 @@ public class AttributeClassInfo
 ]]>
 
 </msxsl:script>
+
+
+<!-- ##################################################################################### -->
+<!-- TEMPLATE: BUILD THE MODEL XML -->
+<!--
+
+This section converts StarUML (Xml equivalent) to a Model Xml document having the
+following structure.  Note that the resulting Xml is stored in a variable for re-use
+in the build-output template.
+
+<!DOCTYPE model [
+
+  <!ELEMENT model (name, file, modify-timestamp, transform-timestamp, author, entity*)>
+
+    <!ELEMENT name xs:text CDATA  #REQUIRED "Name of the model.">
+    <!ELEMENT file xs:text CDATA  #REQUIRED "Name of the file.">
+    <!ELEMENT modify-timestamp xs:datetime CDATA #REQUIRED "Timestamp on which the file was last modified.">
+    <!ELEMENT transform-timestamp xs:datetime CDATA #REQUIRED "Timestamp on which the Xsl transform was generated.">
+    <!ELEMENT author xs:date CDATA  #REQUIRED "Author(s) of the file.">
+
+    <!ELEMENT subject (name, entity*)>
+
+      <!ELEMENT name xs:text CDATA  #REQUIRED "Name of the subject area.">
+
+      <!ELEMENT entity (name, attribute*, measure*, instance*)>
+        <!ATTLIST entity
+          implement xs:text (true | false) #DEFAULT false "Indicates whether use the entity in physical implementations, e.g. DDL."
+          infer-grain xs:text (true | false) #DEFAULT false "Indicates whether the entity DDL implementation should infer a grain column.">
+
+        <!ELEMENT name  xs:text CDATA #REQUIRED "Name of the entity.">
+
+        <!ELEMENT attribute (name, reference-name?, type-name?, definition?, multiplicity)>
+        <!ATTLIST attribute
+          implement xs:text (true | false) #DEFAULT false "Indicates whether use the attribute in physical implementations, e.g. DDL."
+          grain xs:text (true | false) #DEFAULT false "Indicates whether attribute is part of the entity grain."
+          reference xs:text (true | false) #DEFAULT false "Indicates whether the attribute is a reference to another entity."
+          derived xs:text (true | false) #DEFAULT false "Indicates whether the attribute is derived or formulated from other attributes.">
+
+          <!ELEMENT name xs:text CDATA #REQUIRED "Name of the attribute.">
+          <!ELEMENT reference-name xs:text CDATA "Name of the reference entity.">
+          <!ELEMENT type-name xs:text CDATA "Name of the attribute type (attribute class).">
+          <!ELEMENT definition xs:text CDATA "Business definition of the attribute.">
+          <!ELEMENT multiplicity xs:text (0..1 | 1 | 0..* | 1..* | *) #DEFAULT 1 "Guidelines on calcuting or deriving the attribute.">
+
+        <!ELEMENT measure (name, reference-name?, type-name?, definition?, specification?)>
+        <!ATTLIST measure
+          reference xs:text (true | false) #DEFAULT false "Indicates whether the attribute is a reference to another entity.">
+
+          <!ELEMENT name "Name of the measure.">
+          <!ELEMENT reference-name "Name of the resulting reference entity.">
+          <!ELEMENT type-name "Name of the resulting attribute type (attribute class).">
+          <!ELEMENT definition "Business definition of the measure.">
+          <!ELEMENT specification "Guidelines on calcuting or deriving the measure.">
+
+        <!ELEMENT instance (name, definition?)>
+          <!ELEMENT name "Name of the instance.">
+          <!ELEMENT definition "Business definition of the instance.">
+]>
+
+-->
+<!-- ##################################################################################### -->
+
+<xsl:template name="build-model-xml">
+<model entity-count="{count(//ownedElements[
+    _type='UMLClass'
+    and not(visibility)
+    and ancestor::ownedElements[
+      _type='UMLSubsystem' 
+      and name!='Attribute Classes']
+  ])}">
+  <name><xsl:value-of select="document/name" /></name>
+  <file><xsl:value-of select="document/@sourceFile" /></file>
+  <author><xsl:value-of select="document/author" /></author>
+  <modify-timestamp><xsl:value-of select="document/@sourceModifiedTimestamp" /></modify-timestamp>
+  <transform-timestamp><xsl:value-of select="document/@transformedTimestamp" /></transform-timestamp>
+
+<!-- NOTE:
+  Exclude Subject Areas (UMLSubsystem) called "Attribute Classes"
+  Include only Subject Areas having an immediate child Entity (UMLClass) -->
+<xsl:apply-templates select="//ownedElements[
+    _type='UMLSubsystem' 
+    and name !='Attribute Classes' 
+    and child::ownedElements[_type='UMLClass']
+  ]" mode="subject" />
+</model>
+</xsl:template>
+
+<!-- TEMPLATE: SUBJECT NODES -->
+<xsl:template match="ownedElements" mode="subject">
+<subject entity-count="{count(.//ownedElements[_type='UMLClass'])}">
+  <name><xsl:value-of select="name" /></name>
+
+<xsl:apply-templates select="ownedElements[_type='UMLClass']" mode="entity" />
+</subject>
+</xsl:template>
+
+<!-- TEMPLATE: ENTITY NODES -->
+<xsl:template match="ownedElements" mode="entity">
+<xsl:variable name="class-id" select="_id" />
+
+<xsl:variable name="implement">
+  <xsl:choose>
+  <xsl:when test="visibility">false</xsl:when>
+  <xsl:otherwise>true</xsl:otherwise>
+  </xsl:choose>
+</xsl:variable>
+
+<xsl:variable name="infer-grain">
+  <xsl:choose>
+  <xsl:when test="count(attributes[isUnique='true'])=0">true</xsl:when>
+  <xsl:otherwise>false</xsl:otherwise>
+  </xsl:choose>
+</xsl:variable>
+
+<entity implement="{$implement}" infer-grain="{$infer-grain}">
+  <name><xsl:value-of select="name" /></name>
+
+<xsl:apply-templates select="attributes" mode="attribute" />
+<xsl:apply-templates select="operations" mode="measure" />
+<xsl:apply-templates select="//ownedElements[_type='UMLEnumeration' and stereotype/_ref=$class-id]/literals" mode="instance" />
+</entity>
+</xsl:template>
+
+<!-- TEMPLATE: ATTRIBUTE NODES -->
+<xsl:template match="attributes" mode="attribute">
+<xsl:variable name="stereotype-class-id" select="stereotype/_ref" />
+<xsl:variable name="type-class-id" select="type/_ref" />
+
+<xsl:variable name="implement">
+  <xsl:choose>
+  <xsl:when test="not(visibility) and not(ancestor::ownedElements[_type='UMLClass'][1]/visibility) and (not(multiplicity) or multiplicity='0..1')">true</xsl:when>
+  <xsl:otherwise>false</xsl:otherwise>
+  </xsl:choose>
+</xsl:variable>
+
+<xsl:variable name="grain">
+  <xsl:choose>
+  <xsl:when test="isUnique='true'">true</xsl:when>
+  <xsl:otherwise>false</xsl:otherwise>
+  </xsl:choose>
+</xsl:variable>
+
+<xsl:variable name="reference">
+  <xsl:choose>
+  <xsl:when test="$stereotype-class-id">true</xsl:when>
+  <xsl:otherwise>false</xsl:otherwise>
+  </xsl:choose>
+</xsl:variable>
+
+<xsl:variable name="derived">
+  <xsl:choose>
+  <xsl:when test="isDerived='true'">true</xsl:when>
+  <xsl:otherwise>false</xsl:otherwise>
+  </xsl:choose>
+</xsl:variable>
+
+<attribute implement="{$implement}" grain="{$grain}" reference="{$reference}" derived="{$derived}">
+  <name><xsl:value-of select="name" /></name>
+<xsl:choose>
+  <xsl:when test="$stereotype-class-id"><reference-name><xsl:value-of select="//ownedElements[_type='UMLClass' and _id=$stereotype-class-id]/name" /></reference-name></xsl:when>
+  <xsl:when test="$type-class-id"><type-name><xsl:value-of select="//ownedElements[_type='UMLClass' and _id=$type-class-id]/name" /></type-name></xsl:when>
+  <xsl:otherwise><type-name>{Unknown}</type-name></xsl:otherwise>
+</xsl:choose>
+  <definition><xsl:value-of select="documentation" /></definition>
+  <multiplicity>
+    <xsl:choose>
+      <xsl:when test="multiplicity"><xsl:value-of select="multiplicity" /></xsl:when>
+      <xsl:otherwise>1</xsl:otherwise>
+    </xsl:choose>
+  </multiplicity>
+</attribute>
+</xsl:template>
+
+<!-- TEMPLATE: MEASURE NODES -->
+<xsl:template match="operations" mode="measure">
+<xsl:variable name="stereotype-class-id" select="stereotype/_ref" />
+
+<xsl:variable name="reference">
+  <xsl:choose>
+  <xsl:when test="$stereotype-class-id">true</xsl:when>
+  <xsl:otherwise>false</xsl:otherwise>
+  </xsl:choose>
+</xsl:variable>
+
+<measure reference="${reference}">
+  <name><xsl:value-of select="name" /></name>
+  <xsl:if test="$stereotype-class-id">
+    <reference-name><xsl:value-of select="//ownedElements[_type='UMLClass' and _id=$stereotype-class-id]/name" /></reference-name>
+  </xsl:if>
+  <definition><xsl:value-of select="documentation" /></definition>
+  <specification><xsl:value-of select="specification" /></specification>
+</measure>
+</xsl:template>
+
+<!-- TEMPLATE: INSTANCE NODES -->
+<xsl:template match="literals" mode="instance">
+<instance>
+  <name><xsl:value-of select="name" /></name>
+  <definition><xsl:value-of select="documentation" /></definition>
+</instance>
+</xsl:template>
 
 </xsl:stylesheet>
