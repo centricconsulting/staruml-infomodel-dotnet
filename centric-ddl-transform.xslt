@@ -355,13 +355,6 @@ public class AttributeClassInfo
     {
       return WorkingName;
     }
-
-    // check for plurals by adding "s"
-    if(WorkingName.EndsWith(this.Suffix + "s"))
-    {
-      return WorkingName.Substring(0, WorkingName.Length-1);
-    }
-
     // test if variant suffixes are being used, and then replace
     if(this.VariantSuffixes != null)
     {
@@ -370,11 +363,6 @@ public class AttributeClassInfo
         if(WorkingName.EndsWith(VariantSuffix))
         {
           return WorkingName.Substring(0, WorkingName.Length-VariantSuffix.Length) + this.Suffix;
-        }
-
-        if(WorkingName.EndsWith(VariantSuffix + "s"))
-        {
-          return WorkingName.Substring(0, WorkingName.Length-VariantSuffix.Length-1) + this.Suffix;
         }
       }
     }
@@ -419,7 +407,7 @@ public class AttributeClassInfo
         return new AttributeClassInfo("_address", "VARCHAR(200)");
 
       case "CURRENCY": 
-        return new AttributeClassInfo("_amount", "DECIMAL(20,12)", new String[] {"_amt", "_dollars"});
+        return new AttributeClassInfo("_amount", "DECIMAL(20,12)", new String[] {"_amt", "_dollars", "_dollar"});
 
       case "QUANTITY":
         return new AttributeClassInfo("_quantity", "DECIMAL(20,12)", new String[] {"_qty", "_amount"});
@@ -431,25 +419,25 @@ public class AttributeClassInfo
         return new AttributeClassInfo("_value", "INT", new String[] {"_val", "_int", "_integer"});
 
       case "IDENTIFIER":
-        return new AttributeClassInfo("_identifier", "VARCHAR(200)", new String[] {"_number", "_nbr", "_num", "_id"});
+        return new AttributeClassInfo("_identifier", "VARCHAR(200)", new String[] {"_number", "_numbers", "_nbr", "_num", "_id"});
 
       case "NUMBER":
         return new AttributeClassInfo("_number", "VARCHAR(200)", new String[] {"_nbr", "_num", "_identifier", "_id"});
 
       case "INDICATOR":
-        return new AttributeClassInfo("_ind", "BIT", new String[] {"_indicator", "_flag"});
+        return new AttributeClassInfo("_ind", "BIT", new String[] {"_indicator", "_indicators", "_flag", "_flags"});
 
       case "FLAG":
-        return new AttributeClassInfo("_flag", "VARCHAR(20)", new String[] {"_code"});
+        return new AttributeClassInfo("_flag", "VARCHAR(20)", new String[] {"_code", "_flags"});
 
       case "NOTE":
-        return new AttributeClassInfo("_note", "VARCHAR(200)", new String[] {"_comment"});
+        return new AttributeClassInfo("_note", "VARCHAR(200)", new String[] {"_comment", "_comments", "_notes"});
 
       case "LIST":
-        return new AttributeClassInfo("_list", "VARCHAR(2000)");
+        return new AttributeClassInfo("_list", "VARCHAR(2000)", new String[] {"_listing"});
 
       case "COUNT":
-        return new AttributeClassInfo("_count", "INT", new String[] {"_quantity", "_qty"});
+        return new AttributeClassInfo("_count", "INT", new String[] {"_quantity", "_qty", "_counts", "_ct"});
 
       case "ORDINAL":
         return new AttributeClassInfo("_index", "INT", new String[] {"_count", "_quantity", "_qty", "_value", "_val"});
