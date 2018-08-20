@@ -184,7 +184,7 @@ INSTANCE: <xsl:value-of select="name" />
 <xsl:param name="grain" />
 <xsl:param name="required" />
 , <xsl:value-of select="user:GetColumnPhrase(name, type-name, reference-name)" />
-<xsl:if test="$required">NOT NULL</xsl:if>
+<xsl:if test="$required"> NOT NULL</xsl:if>
 <xsl:if test="not($grain) and @reference='true'"> DEFAULT 'UNKNOWN'</xsl:if>
 </xsl:template>
 
@@ -393,6 +393,9 @@ public class AttributeClassInfo
 
       case "TIMESTAMP":
         return new AttributeClassInfo("_timestamp", "DATETIME2", new String[] {"_dtm", "_date", "_datetime"});
+
+      case "TIME ORDINAL":
+        return new AttributeClassInfo("", "INT");
 
       case "NAME":
         return new AttributeClassInfo("_name", "VARCHAR(200)");
