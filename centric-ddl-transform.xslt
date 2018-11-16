@@ -78,6 +78,40 @@ SUBJECT AREA: <xsl:value-of select="name" /> (<xsl:value-of select="count(entity
 TABLE: <xsl:value-of select="$table-name" />
 ##################################################################################### */
 
+<<<<<<< HEAD
+CREATE TABLE dbo.[<xsl:value-of select="user:GetTableName($class-name)" />] (
+
+  -- GRAIN COLUMNS (PRIMARY KEY)
+<xsl:choose>
+<xsl:when test="count(attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and isUnique='true'])=0">
+<xsl:text>&#160;&#160;</xsl:text><xsl:value-of select="user:GetColumnPhrase($class-name, 'REFERENCE', true())" /> NOT NULL
+</xsl:when>
+<xsl:otherwise>
+<xsl:for-each select="attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and isUnique='true']" >
+  <xsl:call-template name="column-phrase" >
+  <xsl:with-param name="position" select="position()" />
+  <xsl:with-param name="required" select="true()" />
+  </xsl:call-template>
+</xsl:for-each>
+</xsl:otherwise>
+</xsl:choose>
+  -- ENTITY REFERENCE COLUMNS
+<xsl:for-each
+  select="attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and not(isUnique='true') and stereotype/_ref]" >
+  <xsl:call-template name="column-phrase">
+    <xsl:with-param name="position" select="999" />
+    <xsl:with-param name="required" select="false()" />
+  </xsl:call-template>
+</xsl:for-each>
+  -- ATTRIBUTE COLUMNS
+<xsl:for-each
+  select="attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and not(isUnique='true') and not(stereotype/_ref)]" >
+  <xsl:call-template name="column-phrase" >
+    <xsl:with-param name="position" select="999" />
+    <xsl:with-param name="required" select="false()" />
+  </xsl:call-template>
+</xsl:for-each>
+=======
 CREATE TABLE dbo.[<xsl:value-of select="$table-name" />] (
   -- NAMED KEY COLUMN
   <xsl:value-of select="$table-name" />_key INT IDENTITY(1000,1)
@@ -106,6 +140,7 @@ CREATE TABLE dbo.[<xsl:value-of select="$table-name" />] (
     <xsl:call-template name="column-phrase" />
   </xsl:for-each>
 
+>>>>>>> b93b33eff1e931327ccec4c43a4cf234684d76b4
 /* ### BOILERPLATE BELOW THIS LINE ### */
 
   -- SOURCE COLUMNS
@@ -131,14 +166,21 @@ CREATE TABLE dbo.[<xsl:value-of select="$table-name" />] (
     version_begin_timestamp, version_end_timestamp)
 
   -- PRIMARY KEY ON GRAIN COLUMNS
+<<<<<<< HEAD
+, CONSTRAINT dbo_<xsl:value-of select="user:GetTableName($class-name)" />_pk PRIMARY KEY CLUSTERED (<xsl:text>&#xa;</xsl:text><xsl:choose>
+<xsl:when test="count(attributes[_type='UMLAttribute' and not(contains(multiplicity,'*')) and not(visibility) and isUnique='true'])=0">
+  <xsl:value-of select="user:GetColumnName($class-name, 'REFERENCE', true())" />
+=======
 , CONSTRAINT dbo_<xsl:value-of select="$table-name" />_pk PRIMARY KEY CLUSTERED (<xsl:choose>
 <xsl:when test="@infer-grain='true'">
   <xsl:value-of select="user:GetColumnName(name, 'REFERENCE', name)" />
+>>>>>>> b93b33eff1e931327ccec4c43a4cf234684d76b4
 </xsl:when>
 <xsl:otherwise>
   <xsl:for-each select="attribute[@implement='true' and @grain='true']" >
     <xsl:call-template name="column-name">
     <xsl:with-param name="position" select="position()" />
+    <xsl:with-param name="required" select="false()" />
     </xsl:call-template>
   </xsl:for-each>
 </xsl:otherwise>
@@ -181,6 +223,17 @@ INSTANCE: <xsl:value-of select="name" />
 <!-- ##################################################################################### -->
 
 <xsl:template name="column-phrase" match="attributes">
+<<<<<<< HEAD
+<xsl:param name="position" /><xsl:param name="required" /><xsl:variable name="type-class-id" select="type/_ref" />
+<xsl:choose><xsl:when test="$position>1">,&#160;</xsl:when><xsl:otherwise><xsl:text>&#160;&#160;</xsl:text></xsl:otherwise></xsl:choose><xsl:value-of select="user:GetColumnPhrase(name, //ownedElements[_type='UMLClass' and _id=$type-class-id]/name, stereotype/_ref)" /><xsl:if test="$required=true()"> NOT NULL</xsl:if>
+<xsl:text>&#xa;</xsl:text>
+</xsl:template>
+
+<xsl:template name="column-name" match="attributes">
+<xsl:param name="position" /><xsl:variable name="type-class-id" select="type/_ref" />
+<xsl:choose><xsl:when test="$position>1">,&#160;</xsl:when><xsl:otherwise><xsl:text>&#160;&#160;</xsl:text></xsl:otherwise></xsl:choose><xsl:value-of select="user:GetColumnName(name, //ownedElements[_type='UMLClass' and _id=$type-class-id]/name, stereotype/_ref)" />
+<xsl:text>&#xa;</xsl:text>
+=======
 <xsl:param name="grain" />
 <xsl:param name="required" />
 , <xsl:value-of select="user:GetColumnPhrase(name, type-name, reference-name)" />
@@ -191,6 +244,7 @@ INSTANCE: <xsl:value-of select="name" />
 <xsl:template name="column-name" match="attributes">
 <xsl:param name="position" />
 <xsl:if test="$position>1">, </xsl:if><xsl:value-of select="user:GetColumnName(name, type-name, reference-name)" />
+>>>>>>> b93b33eff1e931327ccec4c43a4cf234684d76b4
 </xsl:template>
 
 <!-- ##################################################################################### -->
