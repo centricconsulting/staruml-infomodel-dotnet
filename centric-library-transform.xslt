@@ -18,7 +18,10 @@
   <xsl:text disable-output-escaping="yes">Description&#xa;</xsl:text>
 
   <!-- all instances are called separately --> 
-  <xsl:for-each select="//ownedElements[_type='UMLClass' and ancestor::ownedElements[_type='UMLSubsystem'][1]/name !='Attribute Classes']">
+  <xsl:for-each select="//ownedElements[_type='UMLClass' and (
+    count(ancestor::ownedElements[_type='UMLSubsystem']) = 0
+    or ancestor::ownedElements[_type='UMLSubsystem'][1]/name !='Attribute Classes'
+    )]">
     <xsl:sort select="ancestor::ownedElements[_type='UMLSubsystem'][1]/name" data-type="text"/>
     <xsl:sort select="name" data-type="text"/>
     <xsl:call-template name="entity" />
@@ -40,9 +43,13 @@
   <xsl:template name="entity" match="ownedElements">
 
     <xsl:variable name="stereotype-class-id" select="stereotype/_ref" />
+    <xsl:variable name="subsystem" select="ancestor::ownedElements[_type='UMLSubsystem'][1]/name" />
 
     <!-- Subject Column --> 
-    <xsl:value-of select="ancestor::ownedElements[_type='UMLSubsystem'][1]/name"/>
+    <xsl:choose>
+    <xsl:when  test="$subsystem"><xsl:value-of select="$subsystem"/></xsl:when>
+    <xsl:otherwise>{Unspecified}</xsl:otherwise>
+    </xsl:choose>   
     <xsl:text disable-output-escaping="yes">&#x9;</xsl:text>
 
     <!-- Entity Column --> 
@@ -101,8 +108,13 @@
   
   <xsl:template name="attribute" match="attributes">
 
+    <xsl:variable name="subsystem" select="ancestor::ownedElements[_type='UMLSubsystem'][1]/name" />        
+
     <!-- Subject Column --> 
-    <xsl:value-of select="ancestor::ownedElements[_type='UMLSubsystem'][1]/name"/>
+    <xsl:choose>
+    <xsl:when  test="$subsystem"><xsl:value-of select="$subsystem"/></xsl:when>
+    <xsl:otherwise>{Unspecified}</xsl:otherwise>
+    </xsl:choose>   
     <xsl:text disable-output-escaping="yes">&#x9;</xsl:text>
 
     <!-- Entity Column --> 
@@ -161,8 +173,13 @@
   
   <xsl:template name="measure" match="ownedElements">
 
+    <xsl:variable name="subsystem" select="ancestor::ownedElements[_type='UMLSubsystem'][1]/name" />
+
     <!-- Subject Column --> 
-    <xsl:value-of select="ancestor::ownedElements[_type='UMLSubsystem'][1]/name"/>
+    <xsl:choose>
+    <xsl:when  test="$subsystem"><xsl:value-of select="$subsystem"/></xsl:when>
+    <xsl:otherwise>{Unspecified}</xsl:otherwise>
+    </xsl:choose>   
     <xsl:text disable-output-escaping="yes">&#x9;</xsl:text>
 
     <!-- Entity Column --> 
