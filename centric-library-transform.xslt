@@ -107,8 +107,9 @@
   <!-- ##################################################################################### -->
   
   <xsl:template name="attribute" match="attributes">
-
-    <xsl:variable name="subsystem" select="ancestor::ownedElements[_type='UMLSubsystem'][1]/name" />        
+    <xsl:variable name="subsystem" select="ancestor::ownedElements[_type='UMLSubsystem'][1]/name" />
+    <xsl:variable name="stereotypeId" select="stereotype/_ref" />
+    <xsl:variable name="typeId" select="type/_ref" />             
 
     <!-- Subject Column --> 
     <xsl:choose>
@@ -135,16 +136,18 @@
     </xsl:choose>
     <xsl:text disable-output-escaping="yes">&#x9;</xsl:text>
 
-    <!-- Element Class Column --> 
-    <xsl:choose>
-      <xsl:when test="sterotype/_ref">[Reference]</xsl:when>
-      <xsl:when test="type/_ref"><xsl:value-of select="//ownedElements[_id=./type/_ref]/name"/></xsl:when>
-      <xsl:otherwise>{Missing}</xsl:otherwise>
+    <!-- Element Class Column -->
+   
+    <xsl:choose>     
+      <xsl:when test="$stereotypeId">[Reference]</xsl:when>
+      <xsl:when test="$typeId"><xsl:value-of select="//ownedElements[_id=$typeId]/name"/></xsl:when>
+      <xsl:otherwise><xsl:value-of select="type/_ref"/></xsl:otherwise>
     </xsl:choose>
     <xsl:text disable-output-escaping="yes">&#x9;</xsl:text>
+   
 
     <!-- Reference Column-->
-    <xsl:value-of select="//ownedElements[_id=./type/_ref]/name"/>
+    <xsl:value-of select="//ownedElements[_id=$stereotypeId]/name"/>
     <xsl:text disable-output-escaping="yes">&#x9;</xsl:text>
 
 
@@ -154,7 +157,7 @@
 
     <!-- Realization Column--> 
     <xsl:choose>
-    <xsl:when test="not(visibility) and not(ancestor::ownedElements[_type='UMLClass'][1]/visibility) and (not(multiplicity) or multiplicity = '0..1')">Physical</xsl:when>
+    <xsl:when test="not(visibility='public') and not(ancestor::ownedElements[_type='UMLClass'][1]/visibility) and (not(multiplicity) or multiplicity = '0..1')">Physical</xsl:when>
     <xsl:otherwise>Virtual</xsl:otherwise>
     </xsl:choose>
     <xsl:text disable-output-escaping="yes">&#x9;</xsl:text>
